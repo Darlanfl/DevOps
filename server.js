@@ -17,7 +17,8 @@ const routes = require("./app/routes");
 const { port, db, cookieSecret } = require("./config/config"); // Application config properties
 /*
 // Fix for A6-Sensitive Data Exposure
-// Load keys for establishing secure HTTPS connection
+
+
 const fs = require("fs");
 const https = require("https");
 const path = require("path");
@@ -26,6 +27,14 @@ const httpsOptions = {
     cert: fs.readFileSync(path.resolve(__dirname, "./artifacts/cert/server.crt"))
 };
 */
+// Load keys for establishing secure HTTPS connection
+var fs = require("fs");
+var https = require("https");
+var path = require("path");
+var httpsOptions = {
+    key: fs.readFileSync(path.resolve(__dirname, "./app/cert/key.pem")),
+    cert: fs.readFileSync(path.resolve(__dirname, "./app/cert/cert.pem"))
+};
 
 MongoClient.connect(db, (err, db) => {
     if (err) {
@@ -35,7 +44,7 @@ MongoClient.connect(db, (err, db) => {
     }
     console.log(`Connected to the database`);
 
-    /*
+
     // Fix for A5 - Security MisConfig
     // TODO: Review the rest of helmet options, like "xssFilter"
     // Remove default x-powered-by response header
@@ -62,10 +71,13 @@ MongoClient.connect(db, (err, db) => {
 
     // Forces browser to only use the Content-Type set in the response header instead of sniffing or guessing it
     app.use(nosniff());
-    */
+
 
     // Adding/ remove HTTP Headers for security
     app.use(favicon(__dirname + "/app/assets/favicon.ico"));
+    //disable HTT  HEADER
+    app.disable("x-powered-by");
+
 
     // Express middleware to populate "req.body" so we can access POST variables
     app.use(bodyParser.json());
@@ -139,7 +151,24 @@ MongoClient.connect(db, (err, db) => {
         // Fix for A3 - XSS, enable auto escaping
         autoescape: true // default value
         */
+
     });
+
+    swig.init({
+        root: __dirname + "/app/views",
+        autoescape: true //default value
+    });
+
+    app.use(express.session({
+        secret: config.cookieSecret,
+        key: "sessionId",
+        cookie: {
+            httpOnly: true,
+            secure: true
+        }
+    }));
+
+
 
     // Insecure HTTP connection
     http.createServer(app).listen(port, () => {
@@ -153,5 +182,21 @@ MongoClient.connect(db, (err, db) => {
         console.log(`Express http server listening on port ${port}`);
     });
     */
+
+    app.use(helmet.xframe());
+
+    // Prevents browser from caching and storing page
+    app.use(helmet.noCache());
+
+    // Allow loading resources only from white-listed domains
+    app.use(helmet.csp());
+
+    // Allow communication only on HTTPS
+    app.use(helmet.hsts());
+
+    // Forces browser to only use the Content-Type set in the response header instead of sniffing or guessing it
+    app.use(nosniff());
+
+
 
 });

@@ -6,7 +6,16 @@ const {
 function AllocationsHandler(db) {
     "use strict";
 
+
     const allocationsDAO = new AllocationsDAO(db);
+
+    var userId = req.params.userId;
+    allocationsDAO.getByUserId(userId, function (error, allocations) {
+
+        if (error) return next(error);
+
+        return res.render("allocations", allocations);
+    });
 
     this.displayAllocations = (req, res, next) => {
         /*
